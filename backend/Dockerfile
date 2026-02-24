@@ -6,7 +6,6 @@ WORKDIR /code
 RUN apt-get update && apt-get install -y \
     libpq-dev \
     gcc \
-    Pillow \
     && rm -rf /var/lib/apt/lists/*
 
 # 安装Python依赖
