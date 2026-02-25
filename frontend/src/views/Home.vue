@@ -84,9 +84,8 @@
                     class="image-wrapper"
                   >
                     <img 
-                      :src="getImageUrl(img)" 
+                      :src="img.image_url" 
                       :alt="item.name"
-                      @error="handleImageError"
                     />
                   </div>
                 </div>
@@ -139,27 +138,6 @@ const loadingMore = ref(false)
 const refreshing = ref(false)
 const page = ref(1)
 const hasMore = ref(true)
-
-const API_BASE_URL = window.location.origin
-
-const getImageUrl = (img) => {
-  // 优先使用thumbnail，如果没有就用image
-  let url = img.thumbnail_url || img.image_url || ''
-  
-  // 如果系相对路径，添加API前缀
-  if (url && !url.startsWith('http')) {
-    // 使用当前域名 + /api/v1 + /static/
-    url = API_BASE_URL + '/api/v1' + url
-  }
-  
-  console.log('Image URL:', url) // 调试用
-  return url
-}
-
-const handleImageError = (e) => {
-  // 图片加载失败时使用默认图
-  e.target.src = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
-}
 
 const fetchItems = async (reset = false) => {
   if (reset) {
