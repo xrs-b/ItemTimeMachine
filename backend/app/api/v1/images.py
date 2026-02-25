@@ -14,8 +14,8 @@ from io import BytesIO
 router = APIRouter()
 
 # 图片存储目录
-UPLOAD_DIR = "/data/images"
-THUMBNAIL_DIR = "/data/thumbnails"
+UPLOAD_DIR = "/code/data/images"
+THUMBNAIL_DIR = "/code/data/thumbnails"
 
 # 确保目录存在（延迟创建）
 def ensure_dirs():
