@@ -18,6 +18,9 @@ COPY . .
 # 创建数据目录
 RUN mkdir -p /data/images /data/thumbnails
 
+# 创建数据目录
+RUN mkdir -p /data/images /data/thumbnails
+
 # 暴露端口
 EXPOSE 8888
 

@@ -8,7 +8,7 @@ services:
     volumes:
       - ./data:/data
     environment:
-      - DATABASE_URL=sqlite:///./data/item_time_machine.db
+      - DATABASE_URL=sqlite:////data/item_time_machine.db
       - SECRET_KEY=item-time-machine-secret-key-change-in-production
     restart: unless-stopped
     healthcheck:
