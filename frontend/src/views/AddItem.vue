@@ -24,9 +24,8 @@
             name="category_id"
             label="分类"
             placeholder="请选择分类"
-            :value="selectedCategoryName"
+            :model-value="selectedCategoryName"
             @click="showCategoryPicker = true"
-            :rules="[{ required: true, message: '请选择分类' }]"
           />
         </van-cell-group>
         
@@ -49,9 +48,8 @@
             name="purchase_date"
             label="购买日期"
             placeholder="请选择购买日期"
-            :value="form.purchase_date"
+            :model-value="form.purchase_date"
             @click="showDatePicker = true"
-            :rules="[{ required: true, message: '请选择购买日期' }]"
           />
         </van-cell-group>
         
@@ -78,7 +76,7 @@
             name="platform"
             label="购买平台"
             placeholder="请选择购买平台"
-            :value="form.platform"
+            :model-value="form.platform"
             @click="showPlatformPicker = true"
           />
         </van-cell-group>
@@ -153,10 +151,10 @@
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { createItem } from '@/api/items'
-import { showToast, showSuccessToast } from 'vant'
+import { showToast } from 'vant'
 
 const router = useRouter()
 
@@ -176,25 +174,53 @@ const showCategoryPicker = ref(false)
 const showDatePicker = ref(false)
 const showPlatformPicker = ref(false)
 
-// 分类数据（从后端获取或预设）
+// 初始化日期为今天
+const today = new Date()
+const currentDate = ref([
+  String(today.getFullYear()),
+  String(today.getMonth() + 1).padStart(2, '0'),
+  String(today.getDate()).padStart(2, '0')
+])
+form.value.purchase_date = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`
+
+const minDate = new Date(2000, 0, 1)
+const maxDate = new Date()
+
+// 分类数据
 const categories = ref([
   { id: 1, name: '数码产品', children: [
     { id: 11, name: '手机' },
     { id: 12, name: '电脑' },
     { id: 13, name: '相机' },
-    { id: 14, name: '耳机' },
-    { id: 15, name: '智能手表' }
+    { id: 14, name: '镜头' },
+    { id: 15, name: '耳机' },
+    { id: 16, name: '智能手表' },
+    { id: 17, name: '游戏机' },
+    { id: 18, name: '其他数码' }
   ]},
   { id: 2, name: '衣服', children: [
     { id: 21, name: 'JK制服' },
     { id: 22, name: '洛丽塔' },
     { id: 23, name: '汉服' },
-    { id: 24, name: '常规服饰' }
+    { id: 24, name: '上装' },
+    { id: 25, name: '下装' },
+    { id: 26, name: '外套' },
+    { id: 27, name: '鞋' },
+    { id: 28, name: '配饰' }
   ]},
   { id: 3, name: '化妆品', children: [
     { id: 31, name: '底妆' },
     { id: 32, name: '彩妆' },
-    { id: 33, name: '护肤' }
+    { id: 33, name: '护肤' },
+    { id: 34, name: '香水' },
+    { id: 35, name: '美容工具' }
+  ]},
+  { id: 4, name: '其他', children: [
+    { id: 41, name: '书籍' },
+    { id: 42, name: '乐器' },
+    { id: 43, name: '运动器材' },
+    { id: 44, name: '家具' },
+    { id: 45, name: '其他' }
   ]}
 ])
 
@@ -219,26 +245,34 @@ const platformColumns = [
 ]
 
 const selectedCategoryName = ref('')
-const currentDate = ref([])
-const minDate = new Date(2000, 0, 1)
-const maxDate = new Date()
 
 const onCategoryConfirm = ({ selectedOptions }) => {
-  const child = selectedOptions[1]
-  if (child) {
-    form.value.category_id = child.value
-    selectedCategoryName.value = child.text
+  // 处理级联选择器的返回值
+  if (selectedOptions && selectedOptions.length >= 2) {
+    const parent = selectedOptions[0]
+    const child = selectedOptions[1]
+    if (child && child.value) {
+      form.value.category_id = child.value
+      selectedCategoryName.value = child.text
+    } else if (parent && parent.value) {
+      form.value.category_id = parent.value
+      selectedCategoryName.value = parent.text
+    }
   }
   showCategoryPicker.value = false
 }
 
 const onDateConfirm = ({ selectedValues }) => {
-  form.value.purchase_date = selectedValues.join('-')
+  const dateStr = selectedValues.join('-')
+  form.value.purchase_date = dateStr
+  currentDate.value = selectedValues
   showDatePicker.value = false
 }
 
 const onPlatformConfirm = ({ selectedOptions }) => {
-  form.value.platform = selectedOptions[0]?.text || ''
+  if (selectedOptions && selectedOptions.length > 0) {
+    form.value.platform = selectedOptions[0].text || ''
+  }
   showPlatformPicker.value = false
 }
 
@@ -253,8 +287,28 @@ const onDelete = (file) => {
 const onSubmit = async () => {
   loading.value = true
   try {
-    await createItem(form.value)
-    showSuccessToast({ message: '添加成功', position: 'top' })
+    // 验证必填字段
+    if (!form.value.name) {
+      showToast({ message: '请输入物品名称', position: 'top' })
+      loading.value = false
+      return
+    }
+    if (!form.value.purchase_price) {
+      showToast({ message: '请输入购买价格', position: 'top' })
+      loading.value = false
+      return
+    }
+    
+    await createItem({
+      name: form.value.name,
+      category_id: form.value.category_id,
+      brand: form.value.brand || null,
+      purchase_date: form.value.purchase_date,
+      purchase_price: parseFloat(form.value.purchase_price),
+      platform: form.value.platform || null,
+      description: form.value.description || null
+    })
+    showToast({ message: '添加成功', position: 'top' })
     router.replace('/')
   } catch (error) {
     showToast({ message: error.message || '添加失败', position: 'top' })
