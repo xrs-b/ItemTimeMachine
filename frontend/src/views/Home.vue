@@ -9,67 +9,103 @@
     
     <!-- 内容区域 -->
     <div class="content">
-      <div v-if="loading" class="loading-state">
-        <van-loading size="24px">加载中...</van-loading>
-      </div>
-      
-      <div v-else-if="items.length === 0" class="empty-state">
-        <van-empty description="还没有记录任何物品">
-          <van-button type="primary" round @click="$router.push('/add')">
-            添加第一个物品
-          </van-button>
-        </van-empty>
-      </div>
-      
-      <div v-else class="items-list">
-        <div v-for="item in items" :key="item.id" class="item-card" @click="$router.push(`/item/${item.id}`)">
-          <!-- 图片九宫格 -->
-          <div class="images-grid" v-if="item.images && item.images.length > 0">
-            <div 
-              v-for="(img, idx) in item.images.slice(0, 9)" 
-              :key="img.id"
-              class="image-item"
-              :class="{ 'single': item.images.length === 1, 'multiple': item.images.length > 1 }"
-            >
-              <img :src="img.thumbnail_url || img.image_url" :alt="item.name" />
+      <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
+        <div v-if="loading && items.length === 0" class="loading-state">
+          <van-loading size="24px">加载中...</van-loading>
+        </div>
+        
+        <div v-else-if="items.length === 0" class="empty-state">
+          <van-empty description="还没有记录任何物品">
+            <van-button type="primary" round @click="$router.push('/add')">
+              添加第一个物品
+            </van-button>
+          </van-empty>
+        </div>
+        
+        <div v-else class="items-list">
+          <!-- 朋友圈风格卡片 -->
+          <div v-for="item in items" :key="item.id" class="item-card" @click="$router.push(`/item/${item.id}`)">
+            <!-- 用户信息区域 -->
+            <div class="card-header">
+              <div class="user-info">
+                <van-image
+                  round
+                  width="40"
+                  height="40"
+                  src="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg"
+                />
+                <div class="user-detail">
+                  <span class="item-name">{{ item.name }}</span>
+                  <span class="publish-time">{{ item.days_since_purchase }}天前</span>
+                </div>
+              </div>
+            </div>
+            
+            <!-- 文字内容区域 -->
+            <div class="card-content">
+              <div class="info-row" v-if="item.category_name">
+                <span class="label">分类：</span>
+                <span class="value">{{ item.category_name }}</span>
+              </div>
+              <div class="info-row" v-if="item.brand">
+                <span class="label">品牌：</span>
+                <span class="value">{{ item.brand }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">购买日期：</span>
+                <span class="value">{{ formatDate(item.purchase_date) }}</span>
+              </div>
+              <div class="info-row">
+                <span class="label">价格：</span>
+                <span class="value price">¥{{ item.purchase_price }}</span>
+              </div>
+              <div class="info-row" v-if="item.platform">
+                <span class="label">平台：</span>
+                <span class="value">{{ item.platform }}</span>
+              </div>
+              <div class="info-row" v-if="item.days_since_purchase">
+                <span class="label">已购：</span>
+                <span class="value">{{ item.days_since_purchase }}天</span>
+              </div>
+              <div class="info-row" v-if="item.estimated_value">
+                <span class="label">二手估价：</span>
+                <span class="value estimate">¥{{ item.estimated_value }}</span>
+              </div>
+              <div class="info-row" v-if="item.description">
+                <span class="label">备注：</span>
+                <span class="value">{{ item.description }}</span>
+              </div>
+            </div>
+            
+            <!-- 九宫格图片区域 -->
+            <div class="images-grid" v-if="item.images && item.images.length > 0">
+              <div 
+                v-for="(img, idx) in item.images" 
+                :key="img.id"
+                class="image-item"
+                :class="{ 
+                  'single': item.images.length === 1,
+                  'four': item.images.length === 4,
+                  'two': item.images.length === 2
+                }"
+              >
+                <img :src="img.thumbnail_url || img.image_url" :alt="item.name" />
+              </div>
+            </div>
+            
+            <!-- 底部操作区域 -->
+            <div class="card-footer">
+              <span class="location" v-if="item.platform">{{ item.platform }}</span>
             </div>
           </div>
           
-          <!-- 物品信息 -->
-          <div class="item-info">
-            <div class="item-header">
-              <span class="item-name">{{ item.name }}</span>
-              <van-tag :type="getTagType(item.category_id)" size="small">
-                {{ item.category_name || '未分类' }}
-              </van-tag>
-            </div>
-            
-            <div class="item-details">
-              <span class="brand" v-if="item.brand">{{ item.brand }}</span>
-              <span class="platform" v-if="item.platform">{{ item.platform }}</span>
-            </div>
-            
-            <div class="item-footer">
-              <div class="price-info">
-                <span class="purchase-price">¥{{ item.purchase_price }}</span>
-                <span class="days-info" v-if="item.days_since_purchase">
-                  · {{ item.days_since_purchase }}天前
-                </span>
-              </div>
-              <div class="estimate-info" v-if="item.estimated_value">
-                <span class="estimate-label">二手约</span>
-                <span class="estimate-price">¥{{ item.estimated_value }}</span>
-              </div>
-            </div>
+          <!-- 加载更多 -->
+          <div class="load-more" v-if="hasMore" @click="loadMore">
+            <span v-if="loadingMore">加载中...</span>
+            <span v-else>点击加载更多</span>
           </div>
         </div>
-        
-        <!-- 加载更多 -->
-        <div class="load-more" v-if="hasMore" @click="loadMore">
-          <span v-if="loadingMore">加载中...</span>
-          <span v-else>点击加载更多</span>
-        </div>
-      </div>
+      </van-pull-refresh>
     </div>
     
     <!-- 返回顶部按钮 -->
@@ -98,26 +134,36 @@ const activeTab = ref(0)
 const items = ref([])
 const loading = ref(false)
 const loadingMore = ref(false)
+const refreshing = ref(false)
 const page = ref(1)
 const hasMore = ref(true)
 
-const getTagType = (categoryId) => {
-  // 根据分类返回不同颜色标签
-  const types = ['primary', 'success', 'warning', 'danger']
-  return types[categoryId % 4] || 'primary'
+const formatDate = (dateStr) => {
+  if (!dateStr) return ''
+  const date = new Date(dateStr)
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
 }
 
-const fetchItems = async () => {
+const fetchItems = async (reset = false) => {
+  if (reset) {
+    page.value = 1
+    items.value = []
+  }
+  
   loading.value = true
   try {
-    const res = await getItems({ page: 1, page_size: 20 })
-    items.value = res.items || []
+    const res = await getItems({ page: page.value, page_size: 20 })
+    if (reset) {
+      items.value = res.items || []
+    } else {
+      items.value = [...items.value, ...(res.items || [])]
+    }
     hasMore.value = res.has_more
-    page.value = 1
   } catch (error) {
     showToast({ message: error.message || '加载失败', position: 'top' })
   } finally {
     loading.value = false
+    refreshing.value = false
   }
 }
 
@@ -126,10 +172,10 @@ const loadMore = async () => {
   
   loadingMore.value = true
   try {
-    const res = await getItems({ page: page.value + 1, page_size: 20 })
+    page.value++
+    const res = await getItems({ page: page.value, page_size: 20 })
     items.value = [...items.value, ...(res.items || [])]
     hasMore.value = res.has_more
-    page.value++
   } catch (error) {
     showToast({ message: error.message || '加载失败', position: 'top' })
   } finally {
@@ -137,8 +183,13 @@ const loadMore = async () => {
   }
 }
 
+const onRefresh = () => {
+  refreshing.value = true
+  fetchItems(true)
+}
+
 onMounted(() => {
-  fetchItems()
+  fetchItems(true)
 })
 </script>
 
@@ -146,11 +197,11 @@ onMounted(() => {
 .home-container {
   min-height: 100vh;
   background-color: #f5f5f5;
-  padding-bottom: 50px;
 }
 
 .content {
   padding-top: 46px;
+  padding-bottom: 60px;
 }
 
 .loading-state,
@@ -163,108 +214,119 @@ onMounted(() => {
   padding: 12px;
 }
 
+/* 朋友圈风格卡片 */
 .item-card {
   background: #fff;
-  border-radius: 12px;
+  border-radius: 8px;
   margin-bottom: 12px;
   overflow: hidden;
-  cursor: pointer;
 }
 
-.images-grid {
-  display: grid;
-  gap: 2px;
-}
-
-.images-grid .single {
-  grid-template-columns: 1fr;
-}
-
-.images-grid .single img {
-  width: 100%;
-  height: 300px;
-  object-fit: cover;
-}
-
-.images-grid .multiple {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-.images-grid .multiple img {
-  width: 100%;
-  aspect-ratio: 1;
-  object-fit: cover;
-}
-
-.item-info {
+.card-header {
   padding: 12px;
+  display: flex;
+  align-items: center;
 }
 
-.item-header {
+.user-info {
   display: flex;
-  justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  gap: 10px;
+}
+
+.user-detail {
+  display: flex;
+  flex-direction: column;
 }
 
 .item-name {
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 600;
   color: #323233;
 }
 
-.item-details {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 8px;
-}
-
-.brand,
-.platform {
-  font-size: 13px;
+.publish-time {
+  font-size: 12px;
   color: #969799;
-  background: #f7f8fa;
-  padding: 2px 8px;
-  border-radius: 4px;
 }
 
-.item-footer {
+.card-content {
+  padding: 0 12px 12px;
+}
+
+.info-row {
+  display: flex;
+  font-size: 14px;
+  line-height: 1.8;
+  color: #646566;
+}
+
+.info-row .label {
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.info-row .value {
+  flex: 1;
+}
+
+.info-row .value.price {
+  color: #ee0a24;
+  font-weight: 600;
+}
+
+.info-row .value.estimate {
+  color: #07c160;
+}
+
+/* 九宫格图片 */
+.images-grid {
+  display: grid;
+  gap: 2px;
+  padding: 0 12px;
+}
+
+.images-grid .image-item img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* 单张图片 */
+.images-grid .single {
+  grid-template-columns: 1fr;
+  max-height: 300px;
+}
+
+/* 2张图片 */
+.images-grid .two {
+  grid-template-columns: repeat(2, 1fr);
+  max-height: 200px;
+}
+
+/* 4张图片 */
+.images-grid .four {
+  grid-template-columns: repeat(2, 1fr);
+  max-height: 200px;
+}
+
+/* 3、5、6、7、8、9张图片 */
+.images-grid:not(.single):not(.two):not(.four) {
+  grid-template-columns: repeat(3, 1fr);
+  max-height: 240px;
+}
+
+.card-footer {
+  padding: 8px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.price-info {
-  display: flex;
-  align-items: center;
-}
-
-.purchase-price {
-  font-size: 16px;
-  font-weight: 600;
-  color: #ee0a24;
-}
-
-.days-info {
+.location {
   font-size: 12px;
   color: #969799;
-  margin-left: 4px;
-}
-
-.estimate-info {
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.estimate-label {
-  font-size: 12px;
-  color: #969799;
-}
-
-.estimate-price {
-  font-size: 14px;
-  color: #07c160;
 }
 
 .load-more {
@@ -289,5 +351,6 @@ onMounted(() => {
   color: #fff;
   box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
   cursor: pointer;
+  z-index: 100;
 }
 </style>
