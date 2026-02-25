@@ -77,17 +77,14 @@
               
               <!-- 九宫格图片 -->
               <div class="card-images" v-if="item.images && item.images.length > 0">
-                <div 
-                  class="images-grid"
-                  :class="'grid-' + Math.min(item.images.length, 9)"
-                >
+                <div class="images-grid" :class="'grid-' + Math.min(item.images.length, 9)">
                   <div 
                     v-for="(img, idx) in item.images.slice(0, 9)" 
                     :key="img.id || idx"
                     class="image-wrapper"
                   >
                     <img 
-                      :src="img.thumbnail_url || img.image_url" 
+                      :src="getImageUrl(img)" 
                       :alt="item.name"
                       @error="handleImageError"
                     />
@@ -133,6 +130,8 @@ import { ref, onMounted } from 'vue'
 import { getItems } from '@/api/items'
 import { showToast } from 'vant'
 
+const API_BASE = '/api/v1'
+
 const activeTab = ref(0)
 const items = ref([])
 const loading = ref(false)
@@ -140,6 +139,16 @@ const loadingMore = ref(false)
 const refreshing = ref(false)
 const page = ref(1)
 const hasMore = ref(true)
+
+const getImageUrl = (img) => {
+  // 优先使用thumbnail_url，如果没有就用image_url
+  let url = img.thumbnail_url || img.image_url || ''
+  // 如果URL不是完整URL，添加API前缀
+  if (url && !url.startsWith('http')) {
+    url = API_BASE + url
+  }
+  return url
+}
 
 const handleImageError = (e) => {
   // 图片加载失败时使用默认图
@@ -286,21 +295,25 @@ onMounted(() => {
   gap: 4px;
 }
 
+/* 1张图片 */
 .images-grid.grid-1 {
   grid-template-columns: 1fr;
   max-width: 200px;
 }
 
+/* 2张图片 */
 .images-grid.grid-2 {
   grid-template-columns: repeat(2, 1fr);
   max-width: 220px;
 }
 
+/* 3-4张图片 */
 .images-grid.grid-3,
 .images-grid.grid-4 {
   grid-template-columns: repeat(2, 1fr);
 }
 
+/* 5-9张图片 - 真正的九宫格 */
 .images-grid.grid-5,
 .images-grid.grid-6,
 .images-grid.grid-7,
