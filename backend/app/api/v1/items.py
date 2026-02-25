@@ -1,7 +1,7 @@
 """
-物品API
+物品API - 包含图片上传功能
 """
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import desc
 from pydantic import BaseModel
@@ -10,9 +10,37 @@ from datetime import date, datetime
 from app.core.database import get_db
 from app.models.models import Item, ItemImage, User
 from app.api.v1.auth import get_current_user
-from datetime import date as date_type
+import os
+import uuid
+from PIL import Image
+from io import BytesIO
 
 router = APIRouter()
+
+# 图片存储目录
+UPLOAD_DIR = "/code/data/images"
+THUMBNAIL_DIR = "/code/data/thumbnails"
+
+# 确保目录存在
+def ensure_dirs():
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    os.makedirs(THUMBNAIL_DIR, exist_ok=True)
+
+# 图片大小限制 (10MB)
+MAX_FILE_SIZE = 10 * 1024 * 1024
+
+def create_thumbnail(image_data: bytes, filename: str) -> str:
+    """生成缩略图"""
+    img = Image.open(BytesIO(image_data))
+    img.thumbnail((300, 300))
+    thumb_filename = f"thumb_{filename}"
+    thumb_path = os.path.join(THUMBNAIL_DIR, thumb_filename)
+    img.save(thumb_path, img.format or 'JPEG')
+    return thumb_filename
+
+def calculate_days_since_purchase(purchase_date: date) -> int:
+    today = date.today()
+    return (today - purchase_date).days
 
 # Pydantic模型
 class ItemBase(BaseModel):
@@ -38,27 +66,11 @@ class ItemUpdate(BaseModel):
     description: Optional[str] = None
     second_hand_price: Optional[float] = None
 
-class ItemResponse(ItemBase):
-    id: int
-    user_id: int
-    estimated_value: Optional[float] = None
-    days_since_purchase: Optional[int] = None
-    created_at: datetime
-    images: List[dict] = []
-    
-    class Config:
-        from_attributes = True
-
-# 工具函数
-def calculate_days_since_purchase(purchase_date: date) -> int:
-    today = date.today()
-    return (today - purchase_date).days
-
 # API路由
 @router.get("")
 def get_items(
     page: int = Query(1, ge=1),
-    page_size: int = Query(20, ge=1, le=100),
+    page_size: int = Query(10, ge=1, le=100),
     category_id: Optional[int] = None,
     brand: Optional[str] = None,
     search: Optional[str] = None,
@@ -69,7 +81,6 @@ def get_items(
 ):
     query = db.query(Item).filter(Item.user_id == current_user.id)
     
-    # 筛选条件
     if category_id:
         query = query.filter(Item.category_id == category_id)
     if brand:
@@ -84,11 +95,9 @@ def get_items(
     # 按购买日期倒序
     query = query.options(joinedload(Item.category)).order_by(desc(Item.purchase_date))
     
-    # 分页
     total = query.count()
     items = query.offset((page - 1) * page_size).limit(page_size).all()
     
-    # 处理返回数据
     result = []
     for item in items:
         item_dict = {
@@ -102,7 +111,7 @@ def get_items(
             "platform": item.platform,
             "description": item.description,
             "second_hand_price": item.second_hand_price,
-            "estimated_value": item.estimated_value,
+            "estimated_value": item.estimated_value or item.purchase_price,
             "days_since_purchase": calculate_days_since_purchase(item.purchase_date),
             "created_at": item.created_at,
             "images": [
@@ -153,7 +162,7 @@ def get_item(
         "platform": item.platform,
         "description": item.description,
         "second_hand_price": item.second_hand_price,
-        "estimated_value": item.estimated_value,
+        "estimated_value": item.estimated_value or item.purchase_price,
         "days_since_purchase": calculate_days_since_purchase(item.purchase_date),
         "created_at": item.created_at,
         "images": [
@@ -207,7 +216,6 @@ def update_item(
     if not item:
         raise HTTPException(status_code=404, detail="物品不存在")
     
-    # 更新字段
     update_data = item_data.model_dump(exclude_unset=True)
     if "purchase_date" in update_data:
         update_data["days_since_purchase"] = calculate_days_since_purchase(update_data["purchase_date"])
@@ -235,6 +243,95 @@ def delete_item(
         raise HTTPException(status_code=404, detail="物品不存在")
     
     db.delete(item)
+    db.commit()
+    
+    return {"message": "删除成功"}
+
+# 图片上传API
+@router.post("/{item_id}/images")
+async def upload_image(
+    item_id: int,
+    file: UploadFile = File(...),
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    # 确保目录存在
+    ensure_dirs()
+    
+    # 检查物品是否存在且属于当前用户
+    item = db.query(Item).filter(
+        Item.id == item_id,
+        Item.user_id == current_user.id
+    ).first()
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="物品不存在")
+    
+    # 检查文件大小
+    contents = await file.read()
+    if len(contents) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=400, detail="文件大小不能超过10MB")
+    
+    # 生成唯一文件名
+    ext = os.path.splitext(file.filename)[1] or ".jpg"
+    filename = f"{uuid.uuid4().hex}{ext}"
+    
+    # 保存原图
+    original_path = os.path.join(UPLOAD_DIR, filename)
+    with open(original_path, "wb") as f:
+        f.write(contents)
+    
+    # 生成缩略图
+    thumb_filename = create_thumbnail(contents, filename)
+    
+    # 获取当前最大排序
+    max_order = db.query(ItemImage).filter(ItemImage.item_id == item_id).count()
+    
+    # 保存到数据库
+    image = ItemImage(
+        item_id=item_id,
+        image_type="original",
+        image_path=filename,
+        sort_order=max_order
+    )
+    db.add(image)
+    db.commit()
+    
+    return {
+        "id": image.id,
+        "image_url": f"/static/images/{filename}",
+        "thumbnail_url": f"/static/thumbnails/{thumb_filename}"
+    }
+
+@router.delete("/images/{image_id}")
+def delete_image(
+    image_id: int,
+    current_user: User = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    image = db.query(ItemImage).filter(ItemImage.id == image_id).first()
+    
+    if not image:
+        raise HTTPException(status_code=404, detail="图片不存在")
+    
+    # 检查物品是否属于当前用户
+    item = db.query(Item).filter(
+        Item.id == image.item_id,
+        Item.user_id == current_user.id
+    ).first()
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="图片不存在")
+    
+    # 删除文件
+    if os.path.exists(os.path.join(UPLOAD_DIR, image.image_path)):
+        os.remove(os.path.join(UPLOAD_DIR, image.image_path))
+    
+    thumb_path = os.path.join(THUMBNAIL_DIR, f"thumb_{image.image_path}")
+    if os.path.exists(thumb_path):
+        os.remove(thumb_path)
+    
+    db.delete(image)
     db.commit()
     
     return {"message": "删除成功"}

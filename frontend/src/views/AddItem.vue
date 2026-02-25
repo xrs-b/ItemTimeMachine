@@ -239,7 +239,16 @@ const categoryOptions = [
 ]
 
 const platformColumns = [
-  '淘宝', '京东', '天猫', '拼多多', '小红书', '抖音', '闲鱼', '线下门店', '官网', '其他'
+  { text: '淘宝', value: '淘宝' },
+  { text: '京东', value: '京东' },
+  { text: '天猫', value: '天猫' },
+  { text: '拼多多', value: '拼多多' },
+  { text: '小红书', value: '小红书' },
+  { text: '抖音', value: '抖音' },
+  { text: '闲鱼', value: '闲鱼' },
+  { text: '线下门店', value: '线下门店' },
+  { text: '官网', value: '官网' },
+  { text: '其他', value: '其他' }
 ]
 
 const onCategoryFinish = ({ selectedOptions }) => {
@@ -255,7 +264,9 @@ const onDateConfirm = ({ selectedValues }) => {
 }
 
 const onPlatformConfirm = ({ selectedOptions }) => {
-  form.value.platform = selectedOptions[0]
+  if (selectedOptions && selectedOptions.length > 0) {
+    form.value.platform = selectedOptions[0].value || selectedOptions[0].text || ''
+  }
   showPlatformPicker.value = false
 }
 
