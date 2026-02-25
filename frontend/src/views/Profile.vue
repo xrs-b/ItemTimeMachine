@@ -36,9 +36,9 @@
         <van-cell title="分类管理" is-link to="/categories" icon="label-o" />
       </van-cell-group>
       
-      <!-- 普通用户分类管理 -->
-      <van-cell-group inset v-else>
-        <van-cell title="我的分类" is-link to="/categories" icon="label-o" />
+      <!-- 分类管理 -->
+      <van-cell-group inset>
+        <van-cell title="分类管理" is-link to="/categories" icon="label-o" />
       </van-cell-group>
       
       <!-- 退出登录 -->
