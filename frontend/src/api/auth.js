@@ -1,5 +1,4 @@
 import request from './request'
-import store from '@/stores/auth'
 
 export function login(username, password) {
   const formData = new FormData()
@@ -23,8 +22,4 @@ export function register(username, email, password) {
 
 export function getCurrentUser() {
   return request.get('/auth/me')
-}
-
-export function logout() {
-  store.logout()
 }
