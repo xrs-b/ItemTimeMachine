@@ -153,6 +153,7 @@
         <van-picker
           title="选择平台"
           :columns="platformColumns"
+          value-key="text"
           @confirm="onPlatformConfirm"
           @cancel="showPlatformPicker = false"
         />
@@ -265,7 +266,7 @@ const onDateConfirm = ({ selectedValues }) => {
 
 const onPlatformConfirm = ({ selectedOptions }) => {
   if (selectedOptions && selectedOptions.length > 0) {
-    form.value.platform = selectedOptions[0].value || selectedOptions[0].text || ''
+    form.value.platform = selectedOptions[0].text || ''
   }
   showPlatformPicker.value = false
 }
