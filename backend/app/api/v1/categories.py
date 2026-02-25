@@ -7,6 +7,7 @@ from pydantic import BaseModel
 from typing import Optional
 from app.core.database import get_db
 from app.models.models import Category, User
+from app.api.v1.auth import get_current_user
 
 router = APIRouter()
 

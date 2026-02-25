@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel
 from app.core.database import get_db
 from app.models.models import User
 import os
@@ -27,7 +27,7 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
 # Pydantic模型
 class UserCreate(BaseModel):
     username: str
-    email: EmailStr
+    email: str
     password: str
 
 class UserResponse(BaseModel):

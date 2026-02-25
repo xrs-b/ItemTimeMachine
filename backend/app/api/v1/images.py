@@ -17,8 +17,10 @@ router = APIRouter()
 UPLOAD_DIR = "/data/images"
 THUMBNAIL_DIR = "/data/thumbnails"
 
-os.makedirs(UPLOAD_DIR, exist_ok=True)
-os.makedirs(THUMBNAIL_DIR, exist_ok=True)
+# 确保目录存在（延迟创建）
+def ensure_dirs():
+    os.makedirs(UPLOAD_DIR, exist_ok=True)
+    os.makedirs(THUMBNAIL_DIR, exist_ok=True)
 
 # 图片大小限制 (10MB)
 MAX_FILE_SIZE = 10 * 1024 * 1024
@@ -45,6 +47,8 @@ async def upload_image(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
+    # 确保目录存在
+    ensure_dirs()
     # 检查物品是否存在且属于当前用户
     item = db.query(Item).filter(
         Item.id == item_id,

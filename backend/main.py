@@ -5,10 +5,6 @@ ItemTimeMachine 后端入口
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.api.v1 import auth, items, categories, images, statistics
-from app.core.database import engine, Base
-
-# 创建数据库表
-Base.metadata.create_all(bind=engine)
 
 app = FastAPI(
     title="ItemTimeMachine API",
@@ -31,6 +27,12 @@ app.include_router(items.router, prefix="/api/v1/items", tags=["物品"])
 app.include_router(categories.router, prefix="/api/v1/categories", tags=["分类"])
 app.include_router(images.router, prefix="/api/v1/images", tags=["图片"])
 app.include_router(statistics.router, prefix="/api/v1/statistics", tags=["统计"])
+
+@app.on_event("startup")
+def startup():
+    # 延迟创建数据库表
+    from app.core.database import engine, Base
+    Base.metadata.create_all(bind=engine)
 
 @app.get("/")
 def root():
