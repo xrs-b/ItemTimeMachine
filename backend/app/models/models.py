@@ -14,6 +14,8 @@ class User(Base):
     username = Column(String(50), unique=True, nullable=False, index=True)
     email = Column(String(100), unique=True, nullable=False, index=True)
     hashed_password = Column(String(255), nullable=False)
+    is_admin = Column(Integer, default=0)  # 0:普通用户, 1:管理员
+    is_active = Column(Integer, default=1)  # 1:正常, 0:禁用
     created_at = Column(DateTime, server_default=func.now())
     
     # 关联

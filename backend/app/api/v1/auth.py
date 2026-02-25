@@ -31,7 +31,8 @@ class UserResponse(BaseModel):
     id: int
     username: str
     email: str
-    created_at: datetime
+    is_admin: int
+    is_active: int
     
     class Config:
         from_attributes = True
@@ -83,12 +84,18 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
     if db.query(User).filter(User.email == user_data.email).first():
         raise HTTPException(status_code=400, detail="邮箱已被注册")
     
+    # 检查是否第一个用户，第一个用户默认是管理员
+    user_count = db.query(User).count()
+    is_admin = 1 if user_count == 0 else 0
+    
     # 创建用户
     hashed_password = get_password_hash(user_data.password)
     user = User(
         username=user_data.username,
         email=user_data.email,
-        hashed_password=hashed_password
+        hashed_password=hashed_password,
+        is_admin=is_admin,
+        is_active=1
     )
     db.add(user)
     db.commit()
@@ -104,6 +111,13 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="用户名或密码错误"
+        )
+    
+    # 检查用户是否被禁用
+    if user.is_active == 0:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="此账号已被禁用"
         )
     
     access_token = create_access_token(data={"sub": user.username})

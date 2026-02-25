@@ -6,7 +6,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
-from app.api.v1 import auth, items, categories, statistics
+from app.api.v1 import auth, items, categories, statistics, admin
 
 app = FastAPI(
     title="ItemTimeMachine API",
@@ -28,6 +28,7 @@ app.include_router(auth.router, prefix="/api/v1/auth", tags=["认证"])
 app.include_router(items.router, prefix="/api/v1/items", tags=["物品"])
 app.include_router(categories.router, prefix="/api/v1/categories", tags=["分类"])
 app.include_router(statistics.router, prefix="/api/v1/statistics", tags=["统计"])
+app.include_router(admin.router, prefix="/api/v1/admin", tags=["管理员"])
 
 # 挂载静态文件
 import os
