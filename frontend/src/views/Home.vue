@@ -307,13 +307,17 @@ onMounted(() => {
   max-width: 220px;
 }
 
-/* 3-4张图片 */
-.images-grid.grid-3,
+/* 3张图片 - 真正九宫格 */
+.images-grid.grid-3 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+/* 4张图片 - 2x2 */
 .images-grid.grid-4 {
   grid-template-columns: repeat(2, 1fr);
 }
 
-/* 5-9张图片 - 真正的九宫格 */
+/* 5-9张图片 - 真正九宫格 */
 .images-grid.grid-5,
 .images-grid.grid-6,
 .images-grid.grid-7,
