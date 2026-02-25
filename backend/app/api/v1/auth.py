@@ -4,18 +4,16 @@
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
-from passlib.context import CryptContext
 from datetime import datetime, timedelta
 from jose import JWTError, jwt
 from pydantic import BaseModel
 from app.core.database import get_db
 from app.models.models import User
+from app.api.v1.auth import get_current_user
+import bcrypt
 import os
 
 router = APIRouter()
-
-# 密码加密
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # JWT配置
 SECRET_KEY = os.getenv("SECRET_KEY", "item-time-machine-secret-key-change-in-production")
@@ -43,12 +41,12 @@ class Token(BaseModel):
     access_token: str
     token_type: str
 
-# 工具函数
+# 密码加密 - 使用bcrypt直接
 def verify_password(plain_password: str, hashed_password: str) -> bool:
-    return pwd_context.verify(plain_password, hashed_password)
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password.encode('utf-8'))
 
 def get_password_hash(password: str) -> str:
-    return pwd_context.hash(password)
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
 
 def create_access_token(data: dict) -> str:
     to_encode = data.copy()
