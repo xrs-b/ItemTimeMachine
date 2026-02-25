@@ -141,13 +141,20 @@ const page = ref(1)
 const hasMore = ref(true)
 
 const getImageUrl = (img) => {
-  // 优先使用thumbnail_url，如果没有就用image_url
+  // 直接返回URL，如果系相对路径就添加API前缀
   let url = img.thumbnail_url || img.image_url || ''
-  // 如果URL不是完整URL，添加API前缀
-  if (url && !url.startsWith('http')) {
-    url = API_BASE + url
+  
+  // 如果URL系 /static/ 开头既相对路径
+  if (url && url.startsWith('/static/')) {
+    // 直接用相对路径，Nginx会代理
+    return url
   }
-  return url
+  // 如果URL已经系完整路径
+  if (url && url.startsWith('http')) {
+    return url
+  }
+  // 其他情况
+  return url || ''
 }
 
 const handleImageError = (e) => {
