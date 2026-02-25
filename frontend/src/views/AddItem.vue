@@ -11,7 +11,6 @@
             name="name"
             label="物品名称"
             placeholder="请输入物品名称"
-            :rules="[{ required: true, message: '请输入物品名称' }]"
           />
         </van-cell-group>
         
@@ -21,7 +20,6 @@
             is-link
             readonly
             clickable
-            name="category_id"
             label="分类"
             placeholder="请选择分类"
             :model-value="selectedCategoryName"
@@ -45,7 +43,6 @@
             is-link
             readonly
             clickable
-            name="purchase_date"
             label="购买日期"
             placeholder="请选择购买日期"
             :model-value="form.purchase_date"
@@ -61,7 +58,6 @@
             name="purchase_price"
             label="购买价格"
             placeholder="请输入购买价格"
-            :rules="[{ required: true, message: '请输入购买价格' }]"
           >
             <template #right-icon>¥</template>
           </van-field>
@@ -73,12 +69,24 @@
             is-link
             readonly
             clickable
-            name="platform"
             label="购买平台"
             placeholder="请选择购买平台"
             :model-value="form.platform"
             @click="showPlatformPicker = true"
           />
+        </van-cell-group>
+        
+        <!-- 二手转卖价格 -->
+        <van-cell-group inset>
+          <van-field
+            v-model="form.second_hand_price"
+            type="digit"
+            name="second_hand_price"
+            label="二手转卖价"
+            placeholder="请输入二手转卖价格（选填）"
+          >
+            <template #right-icon>¥</template>
+          </van-field>
         </van-cell-group>
         
         <!-- 描述 -->
@@ -87,7 +95,7 @@
             v-model="form.description"
             type="textarea"
             name="description"
-            label="描述"
+            label="备注"
             placeholder="请输入物品描述（选填）"
             rows="3"
             autosize
@@ -118,10 +126,12 @@
       
       <!-- 分类选择器 -->
       <van-popup v-model:show="showCategoryPicker" position="bottom">
-        <van-picker
-          :columns="categoryColumns"
-          @confirm="onCategoryConfirm"
-          @cancel="showCategoryPicker = false"
+        <van-cascader
+          v-model="categoryCascader"
+          title="选择分类"
+          :options="categoryOptions"
+          @close="showCategoryPicker = false"
+          @finish="onCategoryFinish"
         />
       </van-popup>
       
@@ -141,6 +151,7 @@
       <!-- 平台选择器 -->
       <van-popup v-model:show="showPlatformPicker" position="bottom">
         <van-picker
+          title="选择平台"
           :columns="platformColumns"
           @confirm="onPlatformConfirm"
           @cancel="showPlatformPicker = false"
@@ -153,7 +164,7 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { createItem } from '@/api/items'
+import { createItem, uploadImage } from '@/api/items'
 import { showToast } from 'vant'
 
 const router = useRouter()
@@ -165,6 +176,7 @@ const form = ref({
   purchase_date: '',
   purchase_price: '',
   platform: '',
+  second_hand_price: '',
   description: ''
 })
 
@@ -173,6 +185,8 @@ const loading = ref(false)
 const showCategoryPicker = ref(false)
 const showDatePicker = ref(false)
 const showPlatformPicker = ref(false)
+const categoryCascader = ref('')
+const selectedCategoryName = ref('')
 
 // 初始化日期为今天
 const today = new Date()
@@ -186,93 +200,62 @@ form.value.purchase_date = `${today.getFullYear()}-${String(today.getMonth() + 1
 const minDate = new Date(2000, 0, 1)
 const maxDate = new Date()
 
-// 分类数据
-const categories = ref([
-  { id: 1, name: '数码产品', children: [
-    { id: 11, name: '手机' },
-    { id: 12, name: '电脑' },
-    { id: 13, name: '相机' },
-    { id: 14, name: '镜头' },
-    { id: 15, name: '耳机' },
-    { id: 16, name: '智能手表' },
-    { id: 17, name: '游戏机' },
-    { id: 18, name: '其他数码' }
+// 分类数据 - 扁平化结构用于Cascader
+const categoryOptions = [
+  { text: '数码产品', value: '1', children: [
+    { text: '手机', value: '11' },
+    { text: '电脑', value: '12' },
+    { text: '相机', value: '13' },
+    { text: '镜头', value: '14' },
+    { text: '耳机', value: '15' },
+    { text: '智能手表', value: '16' },
+    { text: '游戏机', value: '17' },
+    { text: '其他数码', value: '18' }
   ]},
-  { id: 2, name: '衣服', children: [
-    { id: 21, name: 'JK制服' },
-    { id: 22, name: '洛丽塔' },
-    { id: 23, name: '汉服' },
-    { id: 24, name: '上装' },
-    { id: 25, name: '下装' },
-    { id: 26, name: '外套' },
-    { id: 27, name: '鞋' },
-    { id: 28, name: '配饰' }
+  { text: '衣服', value: '2', children: [
+    { text: 'JK制服', value: '21' },
+    { text: '洛丽塔', value: '22' },
+    { text: '汉服', value: '23' },
+    { text: '上装', value: '24' },
+    { text: '下装', value: '25' },
+    { text: '外套', value: '26' },
+    { text: '鞋', value: '27' },
+    { text: '配饰', value: '28' }
   ]},
-  { id: 3, name: '化妆品', children: [
-    { id: 31, name: '底妆' },
-    { id: 32, name: '彩妆' },
-    { id: 33, name: '护肤' },
-    { id: 34, name: '香水' },
-    { id: 35, name: '美容工具' }
+  { text: '化妆品', value: '3', children: [
+    { text: '底妆', value: '31' },
+    { text: '彩妆', value: '32' },
+    { text: '护肤', value: '33' },
+    { text: '香水', value: '34' },
+    { text: '美容工具', value: '35' }
   ]},
-  { id: 4, name: '其他', children: [
-    { id: 41, name: '书籍' },
-    { id: 42, name: '乐器' },
-    { id: 43, name: '运动器材' },
-    { id: 44, name: '家具' },
-    { id: 45, name: '其他' }
+  { text: '其他', value: '4', children: [
+    { text: '书籍', value: '41' },
+    { text: '乐器', value: '42' },
+    { text: '运动器材', value: '43' },
+    { text: '家具', value: '44' },
+    { text: '其他', value: '45' }
   ]}
-])
-
-const categoryColumns = computed(() => {
-  return categories.value.map(cat => ({
-    text: cat.name,
-    children: cat.children.map(child => ({ text: child.name, value: child.id }))
-  }))
-})
-
-const platformColumns = [
-  { text: '淘宝' },
-  { text: '京东' },
-  { text: '天猫' },
-  { text: '拼多多' },
-  { text: '小红书' },
-  { text: '抖音' },
-  { text: '闲鱼' },
-  { text: '线下门店' },
-  { text: '官网' },
-  { text: '其他' }
 ]
 
-const selectedCategoryName = ref('')
+const platformColumns = [
+  '淘宝', '京东', '天猫', '拼多多', '小红书', '抖音', '闲鱼', '线下门店', '官网', '其他'
+]
 
-const onCategoryConfirm = ({ selectedOptions }) => {
-  // 处理级联选择器的返回值
-  if (selectedOptions && selectedOptions.length >= 2) {
-    const parent = selectedOptions[0]
-    const child = selectedOptions[1]
-    if (child && child.value) {
-      form.value.category_id = child.value
-      selectedCategoryName.value = child.text
-    } else if (parent && parent.value) {
-      form.value.category_id = parent.value
-      selectedCategoryName.value = parent.text
-    }
-  }
+const onCategoryFinish = ({ selectedOptions }) => {
+  const lastOption = selectedOptions[selectedOptions.length - 1]
+  form.value.category_id = parseInt(lastOption.value)
+  selectedCategoryName.value = lastOption.text
   showCategoryPicker.value = false
 }
 
 const onDateConfirm = ({ selectedValues }) => {
-  const dateStr = selectedValues.join('-')
-  form.value.purchase_date = dateStr
-  currentDate.value = selectedValues
+  form.value.purchase_date = selectedValues.join('-')
   showDatePicker.value = false
 }
 
 const onPlatformConfirm = ({ selectedOptions }) => {
-  if (selectedOptions && selectedOptions.length > 0) {
-    form.value.platform = selectedOptions[0].text || ''
-  }
+  form.value.platform = selectedOptions[0]
   showPlatformPicker.value = false
 }
 
@@ -285,29 +268,38 @@ const onDelete = (file) => {
 }
 
 const onSubmit = async () => {
+  if (!form.value.name) {
+    showToast({ message: '请输入物品名称', position: 'top' })
+    return
+  }
+  if (!form.value.purchase_price) {
+    showToast({ message: '请输入购买价格', position: 'top' })
+    return
+  }
+  
   loading.value = true
   try {
-    // 验证必填字段
-    if (!form.value.name) {
-      showToast({ message: '请输入物品名称', position: 'top' })
-      loading.value = false
-      return
-    }
-    if (!form.value.purchase_price) {
-      showToast({ message: '请输入购买价格', position: 'top' })
-      loading.value = false
-      return
-    }
-    
-    await createItem({
+    // 创建物品
+    const itemData = {
       name: form.value.name,
       category_id: form.value.category_id,
       brand: form.value.brand || null,
       purchase_date: form.value.purchase_date,
       purchase_price: parseFloat(form.value.purchase_price),
       platform: form.value.platform || null,
+      second_hand_price: form.value.second_hand_price ? parseFloat(form.value.second_hand_price) : null,
       description: form.value.description || null
-    })
+    }
+    
+    const item = await createItem(itemData)
+    
+    // 上传图片
+    for (const file of fileList.value) {
+      if (file.file) {
+        await uploadImage(item.id, file.file)
+      }
+    }
+    
     showToast({ message: '添加成功', position: 'top' })
     router.replace('/')
   } catch (error) {

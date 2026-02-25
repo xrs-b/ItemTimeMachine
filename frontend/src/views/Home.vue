@@ -22,80 +22,83 @@
           </van-empty>
         </div>
         
-        <div v-else class="items-list">
+        <div v-else class="timeline-list">
           <!-- 朋友圈风格卡片 -->
-          <div v-for="item in items" :key="item.id" class="item-card" @click="$router.push(`/item/${item.id}`)">
-            <!-- 用户信息区域 -->
-            <div class="card-header">
-              <div class="user-info">
-                <van-image
-                  round
-                  width="40"
-                  height="40"
-                  src="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg"
-                />
-                <div class="user-detail">
-                  <span class="item-name">{{ item.name }}</span>
-                  <span class="publish-time">{{ item.days_since_purchase }}天前</span>
+          <div v-for="item in items" :key="item.id" class="timeline-card" @click="$router.push(`/item/${item.id}`)">
+            <!-- 头像区域 -->
+            <div class="card-avatar">
+              <van-image
+                round
+                width="40"
+                height="40"
+                src="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg"
+              />
+            </div>
+            
+            <!-- 内容区域 -->
+            <div class="card-body">
+              <!-- 用户名和时间 -->
+              <div class="card-header">
+                <span class="username">{{ item.name }}</span>
+                <span class="time">{{ item.days_since_purchase }}天前</span>
+              </div>
+              
+              <!-- 文字内容 -->
+              <div class="card-content">
+                <div class="info-item" v-if="item.category_name">
+                  <span class="label">分类：</span>
+                  <span class="value">{{ item.category_name }}</span>
+                </div>
+                <div class="info-item" v-if="item.brand">
+                  <span class="label">品牌：</span>
+                  <span class="value">{{ item.brand }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">购买日期：</span>
+                  <span class="value">{{ item.purchase_date }}</span>
+                </div>
+                <div class="info-item">
+                  <span class="label">价格：</span>
+                  <span class="value price">¥{{ item.purchase_price }}</span>
+                </div>
+                <div class="info-item" v-if="item.platform">
+                  <span class="label">平台：</span>
+                  <span class="value">{{ item.platform }}</span>
+                </div>
+                <div class="info-item" v-if="item.estimated_value">
+                  <span class="label">二手估价：</span>
+                  <span class="value estimate">¥{{ item.estimated_value }}</span>
+                </div>
+                <div class="info-item" v-if="item.description">
+                  <span class="label">备注：</span>
+                  <span class="value">{{ item.description }}</span>
                 </div>
               </div>
-            </div>
-            
-            <!-- 文字内容区域 -->
-            <div class="card-content">
-              <div class="info-row" v-if="item.category_name">
-                <span class="label">分类：</span>
-                <span class="value">{{ item.category_name }}</span>
+              
+              <!-- 九宫格图片 -->
+              <div class="card-images" v-if="item.images && item.images.length > 0">
+                <div 
+                  class="images-grid"
+                  :class="'grid-' + Math.min(item.images.length, 9)"
+                >
+                  <div 
+                    v-for="(img, idx) in item.images.slice(0, 9)" 
+                    :key="img.id || idx"
+                    class="image-wrapper"
+                  >
+                    <img 
+                      :src="img.thumbnail_url || img.image_url" 
+                      :alt="item.name"
+                      @error="handleImageError"
+                    />
+                  </div>
+                </div>
               </div>
-              <div class="info-row" v-if="item.brand">
-                <span class="label">品牌：</span>
-                <span class="value">{{ item.brand }}</span>
+              
+              <!-- 底部来源 -->
+              <div class="card-footer" v-if="item.platform">
+                <span class="source">{{ item.platform }}</span>
               </div>
-              <div class="info-row">
-                <span class="label">购买日期：</span>
-                <span class="value">{{ formatDate(item.purchase_date) }}</span>
-              </div>
-              <div class="info-row">
-                <span class="label">价格：</span>
-                <span class="value price">¥{{ item.purchase_price }}</span>
-              </div>
-              <div class="info-row" v-if="item.platform">
-                <span class="label">平台：</span>
-                <span class="value">{{ item.platform }}</span>
-              </div>
-              <div class="info-row" v-if="item.days_since_purchase">
-                <span class="label">已购：</span>
-                <span class="value">{{ item.days_since_purchase }}天</span>
-              </div>
-              <div class="info-row" v-if="item.estimated_value">
-                <span class="label">二手估价：</span>
-                <span class="value estimate">¥{{ item.estimated_value }}</span>
-              </div>
-              <div class="info-row" v-if="item.description">
-                <span class="label">备注：</span>
-                <span class="value">{{ item.description }}</span>
-              </div>
-            </div>
-            
-            <!-- 九宫格图片区域 -->
-            <div class="images-grid" v-if="item.images && item.images.length > 0">
-              <div 
-                v-for="(img, idx) in item.images" 
-                :key="img.id"
-                class="image-item"
-                :class="{ 
-                  'single': item.images.length === 1,
-                  'four': item.images.length === 4,
-                  'two': item.images.length === 2
-                }"
-              >
-                <img :src="img.thumbnail_url || img.image_url" :alt="item.name" />
-              </div>
-            </div>
-            
-            <!-- 底部操作区域 -->
-            <div class="card-footer">
-              <span class="location" v-if="item.platform">{{ item.platform }}</span>
             </div>
           </div>
           
@@ -138,10 +141,9 @@ const refreshing = ref(false)
 const page = ref(1)
 const hasMore = ref(true)
 
-const formatDate = (dateStr) => {
-  if (!dateStr) return ''
-  const date = new Date(dateStr)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+const handleImageError = (e) => {
+  // 图片加载失败时使用默认图
+  e.target.src = 'https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg'
 }
 
 const fetchItems = async (reset = false) => {
@@ -152,7 +154,7 @@ const fetchItems = async (reset = false) => {
   
   loading.value = true
   try {
-    const res = await getItems({ page: page.value, page_size: 20 })
+    const res = await getItems({ page: page.value, page_size: 10 })
     if (reset) {
       items.value = res.items || []
     } else {
@@ -173,7 +175,7 @@ const loadMore = async () => {
   loadingMore.value = true
   try {
     page.value++
-    const res = await getItems({ page: page.value, page_size: 20 })
+    const res = await getItems({ page: page.value, page_size: 10 })
     items.value = [...items.value, ...(res.items || [])]
     hasMore.value = res.has_more
   } catch (error) {
@@ -210,131 +212,131 @@ onMounted(() => {
   text-align: center;
 }
 
-.items-list {
-  padding: 12px;
+.timeline-list {
+  padding: 0;
 }
 
 /* 朋友圈风格卡片 */
-.item-card {
+.timeline-card {
   background: #fff;
-  border-radius: 8px;
-  margin-bottom: 12px;
-  overflow: hidden;
+  margin-bottom: 8px;
+  display: flex;
+  padding: 12px;
+}
+
+.card-avatar {
+  flex-shrink: 0;
+  margin-right: 12px;
+}
+
+.card-body {
+  flex: 1;
+  min-width: 0;
 }
 
 .card-header {
-  padding: 12px;
-  display: flex;
-  align-items: center;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-}
-
-.user-detail {
-  display: flex;
-  flex-direction: column;
-}
-
-.item-name {
-  font-size: 15px;
-  font-weight: 600;
-  color: #323233;
-}
-
-.publish-time {
-  font-size: 12px;
-  color: #969799;
-}
-
-.card-content {
-  padding: 0 12px 12px;
-}
-
-.info-row {
-  display: flex;
-  font-size: 14px;
-  line-height: 1.8;
-  color: #646566;
-}
-
-.info-row .label {
-  width: 70px;
-  flex-shrink: 0;
-}
-
-.info-row .value {
-  flex: 1;
-}
-
-.info-row .value.price {
-  color: #ee0a24;
-  font-weight: 600;
-}
-
-.info-row .value.estimate {
-  color: #07c160;
-}
-
-/* 九宫格图片 */
-.images-grid {
-  display: grid;
-  gap: 2px;
-  padding: 0 12px;
-}
-
-.images-grid .image-item img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-/* 单张图片 */
-.images-grid .single {
-  grid-template-columns: 1fr;
-  max-height: 300px;
-}
-
-/* 2张图片 */
-.images-grid .two {
-  grid-template-columns: repeat(2, 1fr);
-  max-height: 200px;
-}
-
-/* 4张图片 */
-.images-grid .four {
-  grid-template-columns: repeat(2, 1fr);
-  max-height: 200px;
-}
-
-/* 3、5、6、7、8、9张图片 */
-.images-grid:not(.single):not(.two):not(.four) {
-  grid-template-columns: repeat(3, 1fr);
-  max-height: 240px;
-}
-
-.card-footer {
-  padding: 8px 12px;
   display: flex;
   justify-content: space-between;
   align-items: center;
+  margin-bottom: 6px;
 }
 
-.location {
+.username {
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.time {
   font-size: 12px;
-  color: #969799;
+  color: #999;
+}
+
+.card-content {
+  margin-bottom: 8px;
+}
+
+.info-item {
+  font-size: 14px;
+  line-height: 1.6;
+  color: #333;
+}
+
+.info-item .label {
+  color: #666;
+}
+
+.info-item .value.price {
+  color: #e64340;
+  font-weight: 500;
+}
+
+.info-item .value.estimate {
+  color: #07c160;
+  font-weight: 500;
+}
+
+/* 九宫格图片 */
+.card-images {
+  margin-top: 8px;
+}
+
+.images-grid {
+  display: grid;
+  gap: 4px;
+}
+
+.images-grid.grid-1 {
+  grid-template-columns: 1fr;
+  max-width: 200px;
+}
+
+.images-grid.grid-2 {
+  grid-template-columns: repeat(2, 1fr);
+  max-width: 220px;
+}
+
+.images-grid.grid-3,
+.images-grid.grid-4 {
+  grid-template-columns: repeat(2, 1fr);
+}
+
+.images-grid.grid-5,
+.images-grid.grid-6,
+.images-grid.grid-7,
+.images-grid.grid-8,
+.images-grid.grid-9 {
+  grid-template-columns: repeat(3, 1fr);
+}
+
+.image-wrapper {
+  aspect-ratio: 1;
+  overflow: hidden;
+  border-radius: 4px;
+}
+
+.image-wrapper img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.card-footer {
+  margin-top: 8px;
+}
+
+.source {
+  font-size: 12px;
+  color: #999;
 }
 
 .load-more {
   text-align: center;
   padding: 16px;
-  color: #969799;
+  color: #999;
   font-size: 14px;
   cursor: pointer;
+  background: #f5f5f5;
 }
 
 .publish-btn {
@@ -343,13 +345,13 @@ onMounted(() => {
   bottom: 80px;
   width: 56px;
   height: 56px;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: #07c160;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   color: #fff;
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: 0 4px 12px rgba(7, 193, 96, 0.4);
   cursor: pointer;
   z-index: 100;
 }
