@@ -5,6 +5,8 @@ services:
       dockerfile: Dockerfile
     ports:
       - "8889:8888"
+    volumes:
+      - app_data:/code/data
     environment:
       - DATABASE_URL=sqlite:////code/data/item_time_machine.db
       - SECRET_KEY=item-time-machine-secret-key-change-in-production
@@ -24,3 +26,6 @@ services:
     depends_on:
       - backend
     restart: unless-stopped
+
+volumes:
+  app_data:
