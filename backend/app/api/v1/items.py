@@ -2,7 +2,8 @@
 物品API
 """
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
+from sqlalchemy import desc
 from pydantic import BaseModel
 from typing import Optional, List
 from datetime import date, datetime
@@ -81,7 +82,7 @@ def get_items(
         query = query.filter(Item.purchase_date <= end_date)
     
     # 按购买日期倒序
-    query = query.order_by(Item.purchase_date.desc())
+    query = query.options(joinedload(Item.category)).order_by(desc(Item.purchase_date))
     
     # 分页
     total = query.count()
@@ -130,7 +131,10 @@ def get_item(
     current_user: User = Depends(get_current_user),
     db: Session = Depends(get_db)
 ):
-    item = db.query(Item).filter(
+    item = db.query(Item).options(
+        joinedload(Item.category),
+        joinedload(Item.images)
+    ).filter(
         Item.id == item_id,
         Item.user_id == current_user.id
     ).first()
