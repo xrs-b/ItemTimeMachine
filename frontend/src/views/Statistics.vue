@@ -96,8 +96,7 @@ onMounted(() => {
 }
 
 .content {
-  padding-top: 46px;
-  padding: 12px;
+  padding: 60px 12px 12px;
 }
 
 .summary-cards {

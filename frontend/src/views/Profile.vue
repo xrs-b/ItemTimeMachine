@@ -3,30 +3,45 @@
     <van-nav-bar title="我的" fixed />
     
     <div class="content">
-      <!-- 用户信息 -->
-      <div class="user-section">
-        <van-image
-          round
-          width="60"
-          height="60"
-          src="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg"
-        />
+      <!-- 用户信息卡片 -->
+      <div class="user-card">
         <div class="user-info">
-          <span class="username">{{ user?.username || '用户' }}</span>
-          <span class="email">{{ user?.email || '' }}</span>
+          <van-image
+            round
+            width="60"
+            height="60"
+            src="https://fastly.jsdelivr.net/npm/@vant/assets/cat.jpeg"
+          />
+          <div class="user-detail">
+            <div class="username">
+              {{ user?.username || '用户' }}
+              <van-tag type="success" size="small" v-if="user?.is_admin === 1">管理员</van-tag>
+            </div>
+            <div class="email">{{ user?.email || '' }}</div>
+          </div>
         </div>
       </div>
       
-      <!-- 功能列表 -->
+      <!-- 统计入口 -->
       <van-cell-group inset>
-        <van-cell title="分类管理" is-link to="/categories" />
-        <van-cell title="数据统计" is-link to="/stats" />
+        <van-cell title="数据统计" is-link to="/stats" icon="chart-trending-o" />
       </van-cell-group>
       
-      <van-cell-group inset>
-        <van-cell title="关于我们" is-link @click="showAbout = true" />
+      <!-- 管理员功能 -->
+      <van-cell-group inset v-if="user?.is_admin === 1">
+        <template #title>
+          <span class="section-title">管理功能</span>
+        </template>
+        <van-cell title="用户管理" is-link to="/admin/users" icon="manager-o" />
+        <van-cell title="分类管理" is-link to="/categories" icon="label-o" />
       </van-cell-group>
       
+      <!-- 普通用户分类管理 -->
+      <van-cell-group inset v-else>
+        <van-cell title="我的分类" is-link to="/categories" icon="label-o" />
+      </van-cell-group>
+      
+      <!-- 退出登录 -->
       <div class="logout-btn">
         <van-button type="danger" block round @click="handleLogout">
           退出登录
@@ -54,7 +69,6 @@ const authStore = useAuthStore()
 
 const activeTab = ref(2)
 const user = ref(null)
-const showAbout = ref(false)
 
 const handleLogout = () => {
   authStore.logout()
@@ -71,36 +85,49 @@ onMounted(() => {
 .profile-container {
   min-height: 100vh;
   background-color: #f5f5f5;
-  padding-bottom: 50px;
+  padding-bottom: 60px;
 }
 
 .content {
-  padding-top: 46px;
-  padding: 12px;
+  padding: 60px 12px 12px;
 }
 
-.user-section {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  padding: 32px 16px;
+.user-card {
+  background: linear-gradient(135deg, #07c160 0%, #06ad56 100%);
+  border-radius: 12px;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+
+.user-info {
   display: flex;
   align-items: center;
   gap: 16px;
 }
 
-.user-info {
-  display: flex;
-  flex-direction: column;
+.user-detail {
+  flex: 1;
 }
 
 .username {
   font-size: 18px;
   font-weight: 600;
   color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .email {
   font-size: 14px;
   color: rgba(255, 255, 255, 0.8);
+  margin-top: 4px;
+}
+
+.section-title {
+  font-size: 14px;
+  color: #969799;
+  font-weight: normal;
 }
 
 .logout-btn {
