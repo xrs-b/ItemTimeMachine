@@ -32,5 +32,5 @@ export function uploadImage(itemId, file) {
 }
 
 export function deleteImage(imageId) {
-  return request.delete(`/images/${imageId}`)
+  return request.delete(`/items/images/${imageId}`)
 }

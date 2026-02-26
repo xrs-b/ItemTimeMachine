@@ -318,9 +318,10 @@ onMounted(() => {
   max-width: 220px;
 }
 
-/* 3张图片 */
+/* 3张图片 - 九宫格 */
 .images-grid.grid-3 {
   grid-template-columns: repeat(3, 1fr);
+}
 }
 
 /* 4张图片 */
