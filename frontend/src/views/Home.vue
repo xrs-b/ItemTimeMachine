@@ -322,7 +322,6 @@ onMounted(() => {
 .images-grid.grid-3 {
   grid-template-columns: repeat(3, 1fr);
 }
-}
 
 /* 4张图片 */
 .images-grid.grid-4 {
