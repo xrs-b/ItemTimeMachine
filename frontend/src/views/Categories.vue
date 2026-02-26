@@ -4,37 +4,44 @@
     
     <div class="content">
       <!-- 提示 -->
-      <div class="tip">点击一级分类可展开/收起二级分类</div>
+      <div class="tip">点击分类可展开/收起，点击右侧按钮可添加或修改</div>
       
       <van-cell-group inset v-if="categories.length > 0">
-        <van-collapse v-model="activeNames">
-          <van-collapse-item 
-            v-for="cat in categories" 
-            :key="cat.id" 
-            :name="cat.id"
-            :title="cat.name"
-          >
-            <template #value>
-              <div class="cat-actions" @click.stop>
-                <span class="add-sub" @click="showAddSubCategory(cat.id)">+添加</span>
-                <span class="edit-cat" @click="editCategory(cat)">修改</span>
-              </div>
-            </template>
-            
-            <!-- 二级分类列表 -->
-            <div class="sub-categories" v-if="cat.children && cat.children.length > 0">
-              <div 
-                v-for="child in cat.children" 
-                :key="child.id" 
-                class="sub-cat-item"
-              >
-                <span>{{ child.name }}</span>
-                <van-icon name="edit" size="14" @click="editCategory(child)" />
-              </div>
+        <van-swipe-cell v-for="cat in categories" :key="cat.id" :right-width="65">
+          <div class="cat-item" @click="toggleCategory(cat.id)">
+            <div class="cat-info">
+              <van-icon 
+                v-if="cat.children && cat.children.length > 0" 
+                :name="expandedIds.includes(cat.id) ? 'arrow-down' : 'arrow'" 
+                size="14" 
+                class="expand-arrow"
+              />
+              <span class="cat-name">{{ cat.name }}</span>
             </div>
-            <div v-else class="no-sub">暂无二级分类</div>
-          </van-collapse-item>
-        </van-collapse>
+            <div class="cat-actions" @click.stop>
+              <van-button size="small" hairline type="primary" @click="showAddSubCategory(cat.id)">+二级</van-button>
+              <van-button size="small" hairline @click="editCategory(cat)">改</van-button>
+            </div>
+          </div>
+          
+          <!-- 二级分类 -->
+          <div v-if="expandedIds.includes(cat.id) && cat.children && cat.children.length > 0" class="sub-list">
+            <div v-for="child in cat.children" :key="child.id" class="sub-item">
+              <span>{{ child.name }}</span>
+              <van-button size="small" hairline @click="editCategory(child)">改</van-button>
+            </div>
+          </div>
+          
+          <template #right>
+            <van-button 
+              square 
+              type="danger" 
+              @click="handleDeleteCategory(cat.id)"
+            >
+              删除
+            </van-button>
+          </template>
+        </van-swipe-cell>
       </van-cell-group>
       
       <van-empty v-else description="暂无分类" />
@@ -47,36 +54,23 @@
       </div>
     </div>
     
-    <!-- 添加一级分类对话框 -->
-    <van-dialog v-model:show="showAddDialog" title="添加一级分类" show-cancel-button @confirm="handleAddCategory">
-      <van-field v-model="newCategoryName" placeholder="请输入分类名称" />
-    </van-dialog>
-    
-    <!-- 添加二级分类对话框 -->
-    <van-dialog v-model:show="showAddSubDialog" title="添加二级分类" show-cancel-button @confirm="handleAddSubCategory">
-      <van-field v-model="newSubCategoryName" placeholder="请输入二级分类名称" />
-    </van-dialog>
-    
-    <!-- 修改分类对话框 -->
-    <van-dialog v-model:show="showEditDialog" title="修改分类" show-cancel-button @confirm="handleEditCategory">
-      <van-field v-model="editCategoryName" placeholder="请输入分类名称" />
+    <!-- 添加/编辑对话框 -->
+    <van-dialog v-model:show="showDialog" :title="isEdit ? '修改分类' : '添加分类'" show-cancel-button @confirm="handleConfirm">
+      <van-field v-model="dialogName" placeholder="请输入分类名称" />
     </van-dialog>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref } from 'vue'
 import { getCategories, createCategory, updateCategory, deleteCategory } from '@/api/categories'
-import { showToast } from 'vant'
+import { showToast, showConfirmDialog } from 'vant'
 
 const categories = ref([])
-const activeNames = ref([])
-const showAddDialog = ref(false)
-const showAddSubDialog = ref(false)
-const showEditDialog = ref(false)
-const newCategoryName = ref('')
-const newSubCategoryName = ref('')
-const editCategoryName = ref('')
+const expandedIds = ref([])
+const showDialog = ref(false)
+const dialogName = ref('')
+const isEdit = ref(false)
 const currentParentId = ref(null)
 const currentEditId = ref(null)
 
@@ -89,64 +83,73 @@ const fetchCategories = async () => {
   }
 }
 
-// 添加一级分类
-const handleAddCategory = async () => {
-  if (!newCategoryName.value) return
-  try {
-    await createCategory({ name: newCategoryName.value, parent_id: null })
-    showToast({ message: '添加成功', position: 'top' })
-    newCategoryName.value = ''
-    fetchCategories()
-  } catch (error) {
-    showToast({ message: error.message || '添加失败', position: 'top' })
+const toggleCategory = (id) => {
+  const idx = expandedIds.value.indexOf(id)
+  if (idx > -1) {
+    expandedIds.value.splice(idx, 1)
+  } else {
+    expandedIds.value.push(id)
   }
 }
 
-// 显示添加二级分类对话框
+const showAddDialog = () => {
+  isEdit.value = false
+  currentParentId.value = null
+  dialogName.value = ''
+  showDialog.value = true
+}
+
 const showAddSubCategory = (parentId) => {
+  isEdit.value = false
   currentParentId.value = parentId
-  newSubCategoryName.value = ''
-  showAddSubDialog.value = true
+  currentEditId.value = null
+  dialogName.value = ''
+  showDialog.value = true
 }
 
-// 添加二级分类
-const handleAddSubCategory = async () => {
-  if (!newSubCategoryName.value || !currentParentId.value) return
-  try {
-    await createCategory({ 
-      name: newSubCategoryName.value, 
-      parent_id: currentParentId.value 
-    })
-    showToast({ message: '添加成功', position: 'top' })
-    newSubCategoryName.value = ''
-    fetchCategories()
-  } catch (error) {
-    showToast({ message: error.message || '添加失败', position: 'top' })
-  }
-}
-
-// 修改分类
 const editCategory = (cat) => {
+  isEdit.value = true
   currentEditId.value = cat.id
-  editCategoryName.value = cat.name
-  showEditDialog.value = true
+  currentParentId.value = cat.parent_id
+  dialogName.value = cat.name
+  showDialog.value = true
 }
 
-const handleEditCategory = async () => {
-  if (!editCategoryName.value || !currentEditId.value) return
+const handleConfirm = async () => {
+  if (!dialogName.value) return
+  
   try {
-    await updateCategory(currentEditId.value, { name: editCategoryName.value })
-    showToast({ message: '修改成功', position: 'top' })
-    editCategoryName.value = ''
+    if (isEdit.value) {
+      await updateCategory(currentEditId.value, { name: dialogName.value })
+      showToast({ message: '修改成功', position: 'top' })
+    } else {
+      await createCategory({ 
+        name: dialogName.value, 
+        parent_id: currentParentId.value 
+      })
+      showToast({ message: '添加成功', position: 'top' })
+    }
+    dialogName.value = ''
     fetchCategories()
   } catch (error) {
-    showToast({ message: error.message || '修改失败', position: 'top' })
+    showToast({ message: error.message || '操作失败', position: 'top' })
   }
 }
 
-onMounted(() => {
-  fetchCategories()
-})
+const handleDeleteCategory = async (id) => {
+  try {
+    await showConfirmDialog({ title: '确认删除', message: '确定要删除这个分类吗？' })
+    await deleteCategory(id)
+    showToast({ message: '删除成功', position: 'top' })
+    fetchCategories()
+  } catch (error) {
+    if (error !== 'cancel') {
+      showToast({ message: error.message || '删除失败', position: 'top' })
+    }
+  }
+}
+
+fetchCategories()
 </script>
 
 <style scoped>
@@ -166,38 +169,45 @@ onMounted(() => {
   color: #969799;
 }
 
-.cat-actions {
-  display: flex;
-  gap: 12px;
-}
-
-.add-sub, .edit-cat {
-  font-size: 12px;
-  color: #07c160;
-  cursor: pointer;
-}
-
-.sub-categories {
-  padding: 8px 0;
-}
-
-.sub-cat-item {
+.cat-item {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 8px 12px;
+  padding: 12px 16px;
+  background: #fff;
+}
+
+.cat-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.expand-arrow {
+  color: #969799;
+}
+
+.cat-name {
+  font-size: 15px;
+}
+
+.cat-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.sub-list {
+  background: #f7f8fa;
+  padding: 8px 0;
+}
+
+.sub-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 16px 10px 32px;
   font-size: 14px;
   color: #646566;
-}
-
-.sub-cat-item:active {
-  background: #f7f8fa;
-}
-
-.no-sub {
-  padding: 8px 12px;
-  font-size: 12px;
-  color: #969799;
 }
 
 .add-btn {

@@ -144,11 +144,20 @@ const hasMore = ref(true)
 const previewImages = (item, startIndex) => {
   if (!item.images || item.images.length === 0) return
   
-  const images = item.images.map(img => img.image_url)
+  // 过滤有效图片
+  const images = item.images
+    .filter(img => img && img.image_url)
+    .map(img => img.image_url)
+  
+  if (images.length === 0) return
+  
   ImagePreview({
     images: images,
     startPosition: startIndex,
-    closeable: true
+    closeable: true,
+    onClose() {
+      // do nothing
+    }
   })
 }
 

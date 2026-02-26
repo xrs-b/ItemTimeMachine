@@ -42,7 +42,7 @@
       
       <!-- 退出登录 -->
       <div class="logout-btn">
-        <van-button type="default" color="#f5f5f5" text-color="#666" block round @click="handleLogout">
+        <van-button color="#ff6b6b" text-color="#fff" block round @click="handleLogout">
           退出登录
         </van-button>
       </div>
