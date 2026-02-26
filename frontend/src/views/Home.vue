@@ -83,19 +83,16 @@
                 </div>
               </div>
               
-              <!-- 九宫格图片 -->
+              <!-- 九宫格图片 - 强制3列 -->
               <div class="card-images" v-if="item.images && item.images.length > 0">
-                <div class="images-grid" :class="'grid-' + Math.min(item.images.length, 9)">
+                <div class="images-grid">
                   <div 
                     v-for="(img, idx) in item.images.slice(0, 9)" 
                     :key="img.id || idx"
                     class="image-wrapper"
                     @click="openPreview(item, idx)"
                   >
-                    <img 
-                      :src="img.image_url" 
-                      :alt="item.name"
-                    />
+                    <img :src="img.image_url" :alt="item.name" />
                   </div>
                 </div>
               </div>
@@ -296,45 +293,15 @@ onMounted(() => {
   font-weight: 500;
 }
 
-/* 九宫格图片 */
+/* 九宫格图片 - 强制3列 */
 .card-images {
   margin-top: 8px;
 }
 
 .images-grid {
   display: grid;
+  grid-template-columns: repeat(3, 1fr);
   gap: 4px;
-}
-
-/* 1张图片 */
-.images-grid.grid-1 {
-  grid-template-columns: 1fr;
-  max-width: 200px;
-}
-
-/* 2张图片 */
-.images-grid.grid-2 {
-  grid-template-columns: repeat(2, 1fr);
-  max-width: 220px;
-}
-
-/* 3张图片 - 九宫格 */
-.images-grid.grid-3 {
-  grid-template-columns: repeat(3, 1fr);
-}
-
-/* 4张图片 */
-.images-grid.grid-4 {
-  grid-template-columns: repeat(2, 1fr);
-}
-
-/* 5-9张图片 */
-.images-grid.grid-5,
-.images-grid.grid-6,
-.images-grid.grid-7,
-.images-grid.grid-8,
-.images-grid.grid-9 {
-  grid-template-columns: repeat(3, 1fr);
 }
 
 .image-wrapper {
