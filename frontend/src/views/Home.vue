@@ -7,6 +7,14 @@
       </template>
     </van-nav-bar>
     
+    <!-- 图片预览组件 -->
+    <van-image-preview
+      v-model:show="showPreview"
+      :images="previewImages"
+      :start-position="previewIndex"
+      @close="showPreview = false"
+    />
+    
     <!-- 内容区域 -->
     <div class="content">
       <van-pull-refresh v-model="refreshing" @refresh="onRefresh">
@@ -82,7 +90,7 @@
                     v-for="(img, idx) in item.images.slice(0, 9)" 
                     :key="img.id || idx"
                     class="image-wrapper"
-                    @click="previewImages(item, idx)"
+                    @click="openPreview(item, idx)"
                   >
                     <img 
                       :src="img.image_url" 
@@ -129,7 +137,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getItems } from '@/api/items'
-import { showToast, createImagePreview } from 'vant'
+import { showToast } from 'vant'
 
 const activeTab = ref(0)
 const items = ref([])
@@ -139,26 +147,23 @@ const refreshing = ref(false)
 const page = ref(1)
 const hasMore = ref(true)
 
-// 图片预览 - 使用createImagePreview
-const previewImages = (item, startIndex) => {
+// 图片预览
+const showPreview = ref(false)
+const previewImages = ref([])
+const previewIndex = ref(0)
+
+const openPreview = (item, idx) => {
   if (!item.images || item.images.length === 0) return
   
-  // 获取所有图片URL
   const images = item.images
     .filter(img => img && img.image_url)
     .map(img => img.image_url)
   
   if (images.length === 0) return
   
-  // 使用createImagePreview
-  const preview = createImagePreview({
-    images: images,
-    startPosition: startIndex || 0,
-    closeable: true,
-    onClose: () => {
-      preview.close()
-    }
-  })
+  previewImages.value = images
+  previewIndex.value = idx
+  showPreview.value = true
 }
 
 const fetchItems = async (reset = false) => {
