@@ -216,8 +216,11 @@ def update_item(
     if not item:
         raise HTTPException(status_code=404, detail="物品不存在")
     
-    update_data = item_data.model_dump(exclude_unset=True)
-    if "purchase_date" in update_data:
+    update_data = item_data.model_dump(exclude_unset=False)
+    # 删除None值，让SQLAlchemy保持原值
+    update_data = {k: v for k, v in update_data.items() if v is not None}
+    
+    if "purchase_date" in update_data and update_data["purchase_date"]:
         update_data["days_since_purchase"] = calculate_days_since_purchase(update_data["purchase_date"])
     
     for key, value in update_data.items():

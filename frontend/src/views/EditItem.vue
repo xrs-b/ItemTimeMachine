@@ -323,16 +323,31 @@ const onSubmit = async () => {
   
   loading.value = true
   try {
-    await updateItem(route.params.id, {
+    // 准备更新数据
+    const updateData = {
       name: form.value.name,
-      category_id: form.value.category_id,
+      category_id: form.value.category_id || null,
       brand: form.value.brand || null,
       purchase_date: form.value.purchase_date,
       purchase_price: parseFloat(form.value.purchase_price),
       platform: form.value.platform || null,
-      second_hand_price: form.value.second_hand_price ? parseFloat(form.value.second_hand_price) : null,
       description: form.value.description || null
-    })
+    }
+    
+    // 处理二手价格
+    if (form.value.second_hand_price && form.value.second_hand_price !== '') {
+      updateData.second_hand_price = parseFloat(form.value.second_hand_price)
+    } else {
+      updateData.second_hand_price = null
+    }
+    
+    // 更新物品基本信息
+    await updateItem(route.params.id, updateData)
+    
+    // 处理图片删除 - 找出被删除既图片
+    const originalImageIds = fileList.value.filter(f => f.id).map(f => f.id)
+    const currentImageIds = fileList.value.filter(f => f.id).map(f => f.id)
+    
     showToast({ message: '保存成功', position: 'top' })
     router.back()
   } catch (error) {
