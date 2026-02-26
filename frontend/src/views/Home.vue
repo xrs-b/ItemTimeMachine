@@ -128,9 +128,8 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
-import { ImagePreview } from 'vant'
 import { getItems } from '@/api/items'
-import { showToast } from 'vant'
+import { showToast, ImagePreview } from 'vant'
 
 const activeTab = ref(0)
 const items = ref([])
@@ -144,20 +143,18 @@ const hasMore = ref(true)
 const previewImages = (item, startIndex) => {
   if (!item.images || item.images.length === 0) return
   
-  // 过滤有效图片
+  // 获取所有图片URL
   const images = item.images
     .filter(img => img && img.image_url)
     .map(img => img.image_url)
   
   if (images.length === 0) return
   
+  // 使用Vant ImagePreview
   ImagePreview({
     images: images,
-    startPosition: startIndex,
-    closeable: true,
-    onClose() {
-      // do nothing
-    }
+    startPosition: typeof startIndex === 'number' ? startIndex : 0,
+    closeable: true
   })
 }
 

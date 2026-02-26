@@ -270,11 +270,11 @@ const fetchItem = async () => {
       ]
     }
     
-    // 处理图片
+    // 处理图片 - 使用image_url避免thumbnail 404
     if (res.images && res.images.length > 0) {
       fileList.value = res.images.map(img => ({
         id: img.id,
-        url: img.thumbnail_url || img.image_url,
+        url: img.image_url || img.thumbnail_url,
         isImage: true
       }))
     }
