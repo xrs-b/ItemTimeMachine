@@ -33,7 +33,6 @@
           <span class="section-title">管理功能</span>
         </template>
         <van-cell title="用户管理" is-link to="/admin/users" icon="manager-o" />
-        <van-cell title="分类管理" is-link to="/categories" icon="label-o" />
       </van-cell-group>
       
       <!-- 分类管理 -->
@@ -43,7 +42,7 @@
       
       <!-- 退出登录 -->
       <div class="logout-btn">
-        <van-button type="danger" block round @click="handleLogout">
+        <van-button type="default" color="#f5f5f5" text-color="#666" block round @click="handleLogout">
           退出登录
         </van-button>
       </div>

@@ -24,7 +24,7 @@
         
         <div v-else class="timeline-list">
           <!-- 朋友圈风格卡片 -->
-          <div v-for="item in items" :key="item.id" class="timeline-card" @click="$router.push(`/item/${item.id}`)">
+          <div v-for="item in items" :key="item.id" class="timeline-card">
             <!-- 头像区域 -->
             <div class="card-avatar">
               <van-image
@@ -82,6 +82,7 @@
                     v-for="(img, idx) in item.images.slice(0, 9)" 
                     :key="img.id || idx"
                     class="image-wrapper"
+                    @click="previewImages(item, idx)"
                   >
                     <img 
                       :src="img.image_url" 
@@ -91,9 +92,10 @@
                 </div>
               </div>
               
-              <!-- 底部来源 -->
-              <div class="card-footer" v-if="item.platform">
-                <span class="source">{{ item.platform }}</span>
+              <!-- 底部来源和修改按钮 -->
+              <div class="card-footer">
+                <span class="source" v-if="item.platform">{{ item.platform }}</span>
+                <span class="edit-btn" @click.stop="$router.push(`/item/${item.id}/edit`)">修改</span>
               </div>
             </div>
           </div>
@@ -126,10 +128,9 @@
 
 <script setup>
 import { ref, onMounted } from 'vue'
+import { ImagePreview } from 'vant'
 import { getItems } from '@/api/items'
 import { showToast } from 'vant'
-
-const API_BASE = '/api/v1'
 
 const activeTab = ref(0)
 const items = ref([])
@@ -138,6 +139,18 @@ const loadingMore = ref(false)
 const refreshing = ref(false)
 const page = ref(1)
 const hasMore = ref(true)
+
+// 图片预览
+const previewImages = (item, startIndex) => {
+  if (!item.images || item.images.length === 0) return
+  
+  const images = item.images.map(img => img.image_url)
+  ImagePreview({
+    images: images,
+    startPosition: startIndex,
+    closeable: true
+  })
+}
 
 const fetchItems = async (reset = false) => {
   if (reset) {
@@ -291,17 +304,17 @@ onMounted(() => {
   max-width: 220px;
 }
 
-/* 3张图片 - 真正九宫格 */
+/* 3张图片 */
 .images-grid.grid-3 {
   grid-template-columns: repeat(3, 1fr);
 }
 
-/* 4张图片 - 2x2 */
+/* 4张图片 */
 .images-grid.grid-4 {
   grid-template-columns: repeat(2, 1fr);
 }
 
-/* 5-9张图片 - 真正九宫格 */
+/* 5-9张图片 */
 .images-grid.grid-5,
 .images-grid.grid-6,
 .images-grid.grid-7,
@@ -314,6 +327,7 @@ onMounted(() => {
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 4px;
+  cursor: pointer;
 }
 
 .image-wrapper img {
@@ -324,11 +338,20 @@ onMounted(() => {
 
 .card-footer {
   margin-top: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .source {
   font-size: 12px;
   color: #999;
+}
+
+.edit-btn {
+  font-size: 12px;
+  color: #07c160;
+  cursor: pointer;
 }
 
 .load-more {
