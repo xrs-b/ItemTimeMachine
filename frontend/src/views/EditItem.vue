@@ -183,6 +183,7 @@ const form = ref({
 })
 
 const fileList = ref([])
+const originalImageIds = ref([])  // 原始图片ID列表
 const loading = ref(false)
 const showCategoryPicker = ref(false)
 const showDatePicker = ref(false)
@@ -270,7 +271,9 @@ const fetchItem = async () => {
       ]
     }
     
-    // 处理图片 - 使用image_url避免thumbnail 404
+    // 处理图片 - 保存原始图片ID，用于比较
+    originalImageIds.value = (res.images || []).map(img => img.id)
+    
     if (res.images && res.images.length > 0) {
       fileList.value = res.images.map(img => ({
         id: img.id,
@@ -304,11 +307,18 @@ const onPlatformConfirm = ({ selectedOptions }) => {
 }
 
 const afterRead = (file) => {
-  // 文件上传处理
+  // file是单个文件或文件数组
+  if (Array.isArray(file)) {
+    file.forEach(f => {
+      f.status = 'done'
+    })
+  } else {
+    file.status = 'done'
+  }
 }
 
 const onDelete = (file) => {
-  // 文件删除处理
+  // Vant会自动从fileList中移除，这里不需要额外处理
 }
 
 const onSubmit = async () => {
@@ -344,9 +354,28 @@ const onSubmit = async () => {
     // 更新物品基本信息
     await updateItem(route.params.id, updateData)
     
-    // 处理图片删除 - 找出被删除既图片
-    const originalImageIds = fileList.value.filter(f => f.id).map(f => f.id)
-    const currentImageIds = fileList.value.filter(f => f.id).map(f => f.id)
+    // 处理图片 - 找出被删除的旧图片
+    const currentIds = fileList.value.filter(f => f.id).map(f => f.id)
+    const deletedIds = originalImageIds.value.filter(id => !currentIds.includes(id))
+    
+    // 删除已移除的图片
+    for (const imgId of deletedIds) {
+      try {
+        await deleteImage(imgId)
+      } catch (e) {
+        console.error('删除图片失败', e)
+      }
+    }
+    
+    // 上传新添加的图片
+    const newFiles = fileList.value.filter(f => !f.id && f.file)
+    for (const fileObj of newFiles) {
+      try {
+        await uploadImage(route.params.id, fileObj.file)
+      } catch (e) {
+        console.error('上传图片失败', e)
+      }
+    }
     
     showToast({ message: '保存成功', position: 'top' })
     router.back()
