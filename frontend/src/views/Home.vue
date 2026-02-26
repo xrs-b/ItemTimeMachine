@@ -129,7 +129,7 @@
 <script setup>
 import { ref, onMounted } from 'vue'
 import { getItems } from '@/api/items'
-import { showToast, ImagePreview } from 'vant'
+import { showToast, createImagePreview } from 'vant'
 
 const activeTab = ref(0)
 const items = ref([])
@@ -139,7 +139,7 @@ const refreshing = ref(false)
 const page = ref(1)
 const hasMore = ref(true)
 
-// 图片预览
+// 图片预览 - 使用createImagePreview
 const previewImages = (item, startIndex) => {
   if (!item.images || item.images.length === 0) return
   
@@ -150,11 +150,14 @@ const previewImages = (item, startIndex) => {
   
   if (images.length === 0) return
   
-  // 使用Vant ImagePreview
-  ImagePreview({
+  // 使用createImagePreview
+  const preview = createImagePreview({
     images: images,
-    startPosition: typeof startIndex === 'number' ? startIndex : 0,
-    closeable: true
+    startPosition: startIndex || 0,
+    closeable: true,
+    onClose: () => {
+      preview.close()
+    }
   })
 }
 
