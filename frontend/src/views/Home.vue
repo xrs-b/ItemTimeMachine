@@ -309,6 +309,7 @@ onMounted(() => {
   overflow: hidden;
   border-radius: 4px;
   cursor: pointer;
+  border: 1px solid #eee;
 }
 
 .image-wrapper img {
