@@ -166,6 +166,7 @@
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { createItem, uploadImage } from '@/api/items'
+import { getCategories } from '@/api/categories'
 import { showToast } from 'vant'
 
 const router = useRouter()
@@ -202,42 +203,24 @@ const minDate = new Date(2000, 0, 1)
 const maxDate = new Date()
 
 // 分类数据 - 扁平化结构用于Cascader
-const categoryOptions = [
-  { text: '数码产品', value: '1', children: [
-    { text: '手机', value: '11' },
-    { text: '电脑', value: '12' },
-    { text: '相机', value: '13' },
-    { text: '镜头', value: '14' },
-    { text: '耳机', value: '15' },
-    { text: '智能手表', value: '16' },
-    { text: '游戏机', value: '17' },
-    { text: '其他数码', value: '18' }
-  ]},
-  { text: '衣服', value: '2', children: [
-    { text: 'JK制服', value: '21' },
-    { text: '洛丽塔', value: '22' },
-    { text: '汉服', value: '23' },
-    { text: '上装', value: '24' },
-    { text: '下装', value: '25' },
-    { text: '外套', value: '26' },
-    { text: '鞋', value: '27' },
-    { text: '配饰', value: '28' }
-  ]},
-  { text: '化妆品', value: '3', children: [
-    { text: '底妆', value: '31' },
-    { text: '彩妆', value: '32' },
-    { text: '护肤', value: '33' },
-    { text: '香水', value: '34' },
-    { text: '美容工具', value: '35' }
-  ]},
-  { text: '其他', value: '4', children: [
-    { text: '书籍', value: '41' },
-    { text: '乐器', value: '42' },
-    { text: '运动器材', value: '43' },
-    { text: '家具', value: '44' },
-    { text: '其他', value: '45' }
-  ]}
-]
+// 分类数据 - 从API动态加载
+const categoryOptions = ref([])
+
+const loadCategories = async () => {
+  try {
+    const res = await getCategories()
+    categoryOptions.value = (res || []).map(cat => ({
+      text: cat.name,
+      value: String(cat.id),
+      children: cat.children ? cat.children.map(child => ({
+        text: child.name,
+        value: String(child.id)
+      })) : []
+    }))
+  } catch (error) {
+    console.error('加载分类失败', error)
+  }
+}
 
 const platformColumns = [
   { text: '淘宝', value: '淘宝' },
@@ -320,6 +303,10 @@ const onSubmit = async () => {
     loading.value = false
   }
 }
+
+onMounted(() => {
+  loadCategories()
+})
 </script>
 
 <style scoped>
